@@ -19,6 +19,8 @@ class PotionInventory(BaseModel):
 def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int):
     """ """
     print(f"potions delievered: {potions_delivered} order_id: {order_id}")
+    new_green = 0
+    ml_used = 0
     for potion in potions_delivered:
         if potion.potion_type == [0, 100, 0, 0]:
             new_green = new_green + potion.quantity
