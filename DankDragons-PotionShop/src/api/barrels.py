@@ -21,9 +21,17 @@ class Barrel(BaseModel):
 
 @router.post("/deliver/{order_id}")
 def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
-    """ """
+    """UPDATE GOLD AND ML """
+    spent = list[3] * list[4]
+    ml_gained = list[4] * list[1]
+    with db.engine.begin() as connection:
+        num_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
+        num_gold = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
+        num_gold -= spent
+        num_ml += ml_gained
+        connection.execute(sqlalchemy.text("UPDATE global_inventory SET gold = num_gold"))
+        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_green_ml = num_ml"))
     print(f"barrels delievered: {barrels_delivered} order_id: {order_id}")
-
     return "OK"
 
 # Gets called once a day

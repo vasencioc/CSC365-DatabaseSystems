@@ -12,7 +12,8 @@ def get_catalog():
     """
     with db.engine.begin() as connection:
         green_bottles = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
-
+        if green_bottles >= 1:
+            green_bottles = 1
     return [
             {
                 "sku": "GREEN_POTION_0",
