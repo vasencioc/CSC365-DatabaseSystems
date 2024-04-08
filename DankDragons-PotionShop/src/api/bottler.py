@@ -21,8 +21,6 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     print(f"potions delievered: {potions_delivered} order_id: {order_id}")
     new_green = 0
     ml_used = 0
-    green_ml = 0
-    green_bottles = 0
     for potion in potions_delivered:
         if potion.potion_type == [0, 100, 0, 0]:
             new_green += potion.quantity
@@ -32,8 +30,8 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
         green_bottles = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
         green_bottles += new_green
         green_ml -= ml_used
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_green_potions = green_bottles"))
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_green_ml = green_ml"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = {green_bottles}"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_ml = {green_ml}"))
     return "OK"
 
 @router.post("/plan")
@@ -44,7 +42,6 @@ def get_bottle_plan():
         while green_ml > 100:
             green_bottles += 1
             green_ml -= 100
-         
     # Each bottle has a quantity of what proportion of red, green, blue, and
     # dark potion to add.
     # Expressed in integers from 1 to 100 that must sum up to 100.
