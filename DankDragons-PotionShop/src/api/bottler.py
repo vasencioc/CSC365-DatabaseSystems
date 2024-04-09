@@ -39,7 +39,7 @@ def get_bottle_plan():
     green_bottles = 0
     with db.engine.begin() as connection:
         green_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
-        while green_ml > 100:
+        while green_ml >= 100:
             green_bottles += 1
             green_ml -= 100
     # Each bottle has a quantity of what proportion of red, green, blue, and
