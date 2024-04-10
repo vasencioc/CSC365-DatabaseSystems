@@ -40,14 +40,47 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
 @router.post("/plan")
 def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
+    purchase = []
     print(wholesale_catalog)
     green_purchase = 0
+    red_purchase = 0
+    blue_purchase = 0
     with db.engine.begin() as connection:
-        num_potions = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
-    if num_potions < 10:
-        green_purchase = 1
-    else:
-        return []
+        num_green = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
+        num_red = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
+        num_blue = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
+        wallet = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
+    #traverse catalog
+    for barrel in wholesale_catalog:
+        # if GREEN barrel in catalog
+        if barrel.potion_type == [0,100, 0, 0]:
+            available_green = barrel.quantity
+            if num_green < 10 and available_green: 
+                green_purchase = 1
+                wallet -= barrel.price
+                purchase.append({
+            "sku": barrel.sku,
+            "quantity": 1,
+        })
+        # if RED barrel in catalog
+        if barrel.potion_type == [100, 0, 0, 0]:
+            available_red = barrel.quantity
+            if num_red < 10 and available_red:
+                    red_purchase = 1
+                    wallet -= barrel.price
+                    purchase.append({
+            "sku": barrel.sku,
+            "quantity": 1,
+        })
+        # if BLUE barrel in catalog
+        if barrel.potion_type == [0, 0, 100, 0]:
+            available_blue = barrel.quantity
+            if num_blue < 10:
+                while wallet > barrel.price and available_blue:
+                    blue_purchase += 1
+                    wallet -= barrel.price
+                    available_blue -= 1
+
     return [
         {
             "sku": wholesale_catalog[Barrel].sku,
