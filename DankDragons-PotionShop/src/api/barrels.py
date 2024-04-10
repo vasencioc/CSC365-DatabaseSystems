@@ -56,31 +56,29 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         if barrel.potion_type == [0,100, 0, 0]:
             available_green = barrel.quantity
             if num_green < 10 and available_green: 
-                green_purchase = 1
                 wallet -= barrel.price
                 purchase.append({
-            "sku": barrel.sku,
-            "quantity": 1,
-        })
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
         # if RED barrel in catalog
         if barrel.potion_type == [100, 0, 0, 0]:
             available_red = barrel.quantity
             if num_red < 10 and available_red:
-                    red_purchase = 1
                     wallet -= barrel.price
                     purchase.append({
-            "sku": barrel.sku,
-            "quantity": 1,
-        })
+                        "sku": barrel.sku,
+                        "quantity": 1,
+                    })
         # if BLUE barrel in catalog
         if barrel.potion_type == [0, 0, 100, 0]:
             available_blue = barrel.quantity
-            if num_blue < 10:
-                while wallet > barrel.price and available_blue:
-                    blue_purchase += 1
+            if num_red < 10 and available_blue:
                     wallet -= barrel.price
-                    available_blue -= 1
-
+                    purchase.append({
+                        "sku": barrel.sku,
+                        "quantity": 1,
+                    })
     return [
         {
             "sku": wholesale_catalog[Barrel].sku,
