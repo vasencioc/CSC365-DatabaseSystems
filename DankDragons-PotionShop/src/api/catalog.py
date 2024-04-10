@@ -15,7 +15,7 @@ def get_catalog():
         if green_bottles >= 1:
             green_bottles = 1
         else:
-            green_bottles = 0
+            return []
     return [ 
             {
                 "sku": "GREEN_POTION_0",
