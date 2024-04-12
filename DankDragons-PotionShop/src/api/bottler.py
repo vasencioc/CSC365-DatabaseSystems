@@ -22,7 +22,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     new_green = 0
     ml_used = 0
     for potion in potions_delivered:
-        while potion.potion_type == [0, 100, 0, 0]:
+        if potion.potion_type == [0, 100, 0, 0]:
             new_green += potion.quantity
             ml_used += (potion.quantity * 100)
     with db.engine.begin() as connection:
