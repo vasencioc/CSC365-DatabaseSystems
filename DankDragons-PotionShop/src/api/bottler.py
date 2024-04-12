@@ -22,7 +22,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     new_green = 0
     ml_used = 0
     for potion in potions_delivered:
-        if potion.potion_type == [0, 100, 0, 0]:
+        while potion.potion_type == [0, 100, 0, 0]:
             new_green += potion.quantity
             ml_used += (potion.quantity * 100)
     with db.engine.begin() as connection:
@@ -36,24 +36,25 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
 
 @router.post("/plan")
 def get_bottle_plan():
+    plan = []
     green_bottles = 0
     with db.engine.begin() as connection:
         green_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
         while green_ml >= 100:
             green_bottles += 1
             green_ml -= 100
+    if green_bottles:
+        plan.append({
+                "potion_type": [0, 100, 0, 0],
+                "quantity": green_bottles,
+            })
     # Each bottle has a quantity of what proportion of red, green, blue, and
     # dark potion to add.
     # Expressed in integers from 1 to 100 that must sum up to 100.
 
     # Initial logic: bottle all barrels into red potions.
 
-    return [
-            {
-                "potion_type": [0, 100, 0, 0],
-                "quantity": green_bottles,
-            }
-        ]
+    return plan
 
 if __name__ == "__main__":
     print(get_bottle_plan())

@@ -43,12 +43,12 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     purchase = []
     print(wholesale_catalog)
     green_purchase = 0
-    red_purchase = 0
-    blue_purchase = 0
+    # red_purchase = 0
+    # blue_purchase = 0
     with db.engine.begin() as connection:
         num_green = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
-        num_red = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
-        num_blue = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
+        # num_red = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
+        # num_blue = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
         wallet = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
     #traverse catalog
     for barrel in wholesale_catalog:
