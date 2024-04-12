@@ -54,8 +54,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     for barrel in wholesale_catalog:
         # if GREEN barrel in catalog
         if barrel.potion_type == [0,100, 0, 0]:
-            available_green = barrel.quantity
-            if num_green < 10 and available_green: 
+            if num_green < 10 and barrel.quantity and barrel.price < wallet: 
                 wallet -= barrel.price
                 purchase.append({
                     "sku": barrel.sku,
