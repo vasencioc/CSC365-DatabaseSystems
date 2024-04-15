@@ -107,13 +107,31 @@ class CartCheckout(BaseModel):
 
 @router.post("/{cart_id}/checkout")
 def checkout(cart_id: int, cart_checkout: CartCheckout):
+    total_bought = 0
+    total_paid = 0
     with db.engine.begin() as connection:
         bank = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
-        num_potions = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
-        if num_potions:
+        num_green_potions = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
+        num_red_potions = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
+        num_blue_potions = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
+        if num_green_potions:
+            total_paid += 50
             bank += 50
-            num_potions -= 1
-            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = {bank}"))
-            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = {num_potions}"))
-    return {"total_potions_bought": 1, "total_gold_paid": 50}
+            total_bought += 1
+            num_green_potions -= 1
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = {num_green_potions}"))
+        if num_red_potions:
+            total_paid += 50
+            bank += 50
+            total_bought += 1
+            num_green_potions -= 1
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions = {num_red_potions}"))
+        if num_blue_potions:
+            total_paid += 50
+            bank += 50
+            total_bought += 1
+            num_blue_potions -= 1
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_blue_potions = {num_blue_potions}"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = {bank}"))
+    return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
 
