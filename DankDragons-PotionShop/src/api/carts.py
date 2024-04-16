@@ -99,7 +99,7 @@ def create_cart(new_cart: Customer):
 class CartItem(BaseModel):
     quantity: int
 
-################################################
+
 @router.post("/{cart_id}/items/{item_sku}")
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
@@ -123,9 +123,9 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         green_inventory = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
         red_inventory = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
         blue_inventory = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
-        for cartID, itemList in carts:
+        for cartID, itemList in carts.items():
             if cartID == cart_id:
-                for item, quantity in itemList:
+                for item, quantity in itemList.items():
                     if item == "GREEN_POTION_0" and quantity < green_inventory:
                         green_inventory -= 1
                         total_bought += 1
@@ -138,7 +138,6 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                         blue_inventory -= 1
                         total_bought += 1
                         total_paid += 50
-        bank -= total_paid
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = green_inventory, num_red_potions = red_inventory, num_blue_potions = blue_inventory, gold = bank"))
-        del carts[cart_id]
+        bank += total_paid
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = {green_inventory}, num_red_potions = {red_inventory}, num_blue_potions = {blue_inventory}, gold = {bank}"))
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
