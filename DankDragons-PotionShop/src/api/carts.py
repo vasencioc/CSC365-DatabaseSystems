@@ -4,6 +4,7 @@ from src.api import auth
 from enum import Enum
 import sqlalchemy
 from src import database as db
+from typing import Dict
 
 router = APIRouter(
     prefix="/carts",
@@ -80,23 +81,19 @@ def post_visits(visit_id: int, customers: list[Customer]):
     Which customers visited the shop today?
     """
     print(customers)
-
     return "OK"
+
+carts: Dict[int, Dict[str, int]] = {}
 
 @router.post("/")
 def create_cart(new_cart: Customer):
     """ """
-    with db.engine.begin() as connection:
-        cartID = connection.execute(sqlalchemy.text("SELECT COUNT(*) FROM Carts")).scalar()
-        cartID += 1
-        customerID = connection.execute(sqlalchemy.text("SELECT customer_ID FROM Customers WHERE name = new_cart.customer_name"))
-        if customerID:
-            connection.execute(sqlalchemy.text("INSERT INTO Carts (cart_ID, cutomer_ID) VALUES (cartID, customerID)"))
-        else:
-            customerID = connection.execute(sqlalchemy.text("SELECT COUNT(*) FROM Customers")).scalar()
-            customerID += 1
-            connection.execute(sqlalchemy.text("INSERT INTO Customers (cutomer_ID, name, class, level) VALUES (customerID, new_cart.customer_name, new_cart.character_class, new_cart.level)"))
-            connection.execute(sqlalchemy.text("INSERT INTO Carts (cart_ID, cutomer_ID) VALUES (cartID, customerID)"))
+    cartID = len(carts) + 1
+    carts[cartID] = {}
+    # with db.engine.begin() as conn:
+    #     result = conn.execute(sqlalchemy.text("SELECT * FROM customers"))
+    #     for name in result:
+    #         print(f"name: {name}\n")
     return {"cart_id": cartID}
 
 class CartItem(BaseModel):
@@ -106,9 +103,10 @@ class CartItem(BaseModel):
 @router.post("/{cart_id}/items/{item_sku}")
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
-    with db.engine.begin() as connection:
-        customerID = connection.execute(sqlalchemy.text("SELECT customer_ID FROM Carts WHERE cart_ID = cart_id"))
-        connection.execute(sqlalchemy.text("INSERT INTO Cart_Items (cart_ID, cutomer_ID, item_sku, quantity) VALUES (cart_id, customerID, item_sku, cart_item.quantity)")) 
+    carts[cart_id][item_sku] = cart_item.quantity
+    # with db.engine.begin() as connection:
+    #     customerID = connection.execute(sqlalchemy.text("SELECT customer_ID FROM Carts WHERE cart_ID = cart_id"))
+    #     connection.execute(sqlalchemy.text("INSERT INTO Cart_Items (cart_ID, cutomer_ID, item_sku, quantity) VALUES (cart_id, customerID, item_sku, cart_item.quantity)")) 
     return "OK"
 
 
@@ -119,26 +117,28 @@ class CartCheckout(BaseModel):
 @router.post("/{cart_id}/checkout")
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     total_paid = 0
+    total_bought = 0
     with db.engine.begin() as connection:
         bank = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
         green_inventory = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
         red_inventory = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
         blue_inventory = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
-        green_bought = connection.execute(sqlalchemy.text("SELECT quantity FROM Cart_Items WHERE cart_ID = cart_id AND item_sku = 'GREEN_POTION_0'")).scalar()
-        red_bought = connection.execute(sqlalchemy.text("SELECT quantity FROM Cart_Items WHERE cart_ID = cart_id AND item_sku = 'RED_POTION_0'")).scalar()
-        blue_bought = connection.execute(sqlalchemy.text("SELECT quantity FROM Cart_Items WHERE cart_ID = cart_id AND item_sku = 'BLUE_POTION_0'")).scalar()
-        total_bought = green_bought + red_bought + blue_bought
-        if green_bought:
-            green_inventory -= green_bought
-            total_paid += (green_bought * 50)
-        if red_bought:
-            red_inventory -= red_bought
-            total_paid += (red_bought * 50)
-        if blue_bought:
-            blue_inventory -= blue_bought
-            total_paid += (blue_bought * 50)
+        for cartID, itemList in carts:
+            if cartID == cart_id:
+                for item, quantity in itemList:
+                    if item == "GREEN_POTION_0" and quantity < green_inventory:
+                        green_inventory -= 1
+                        total_bought += 1
+                        total_paid += 50
+                    elif item == "RED_POTION_0" and quantity < red_inventory:
+                        red_inventory -= 1
+                        total_bought += 1
+                        total_paid += 50
+                    elif item == "BLUE_POTION_0" and quantity < blue_inventory:
+                        blue_inventory -= 1
+                        total_bought += 1
+                        total_paid += 50
         bank -= total_paid
         connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = green_inventory, num_red_potions = red_inventory, num_blue_potions = blue_inventory, gold = bank"))
-        connection.execute(sqlalchemy.text("DELETE FROM Carts WHERE cart_ID = cart_id"))
-        connection.execute(sqlalchemy.text("DELETE FROM Cart_Items WHERE cart_ID = cart_id"))
+        del carts[cart_id]
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
