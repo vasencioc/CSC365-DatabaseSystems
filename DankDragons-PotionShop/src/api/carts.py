@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from src.api import auth
 from enum import Enum
 import sqlalchemy
-from src import database as db
 from typing import Dict
+from src import database as db
 
 router = APIRouter(
     prefix="/carts",
@@ -125,16 +125,20 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         blue_inventory = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
         for cartID, itemList in carts.items():
             if cartID == cart_id:
+                print(cart_id)
                 for item, quantity in itemList.items():
-                    if item == "GREEN_POTION_0" and quantity < green_inventory:
+                    if item == 'GREEN_POTION_0' and quantity <= green_inventory:
+                        print(cart_id)
                         green_inventory -= 1
                         total_bought += 1
                         total_paid += 50
-                    elif item == "RED_POTION_0" and quantity < red_inventory:
+                    elif item == 'RED_POTION_0' and quantity <= red_inventory:
+                        print(cart_id)
                         red_inventory -= 1
                         total_bought += 1
                         total_paid += 50
-                    elif item == "BLUE_POTION_0" and quantity < blue_inventory:
+                    elif item == 'BLUE_POTION_0' and quantity <= blue_inventory:
+                        print(cart_id)
                         blue_inventory -= 1
                         total_bought += 1
                         total_paid += 50

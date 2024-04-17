@@ -22,6 +22,15 @@ class Barrel(BaseModel):
 @router.post("/deliver/{order_id}")
 def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
     ""
+    # with db.engine.begin() as connection:
+    #     try:
+    #         connection.execute(
+    #             sqlalchemy.text(
+    #                 "INSERT INTO processed (jod_id, type) VALUES (:order_id, 'barrels')"
+    #             ), [{"order_id": order_id}]
+    #         )
+    #     except IntegrityError as e:
+    #         return "OK"
     spent = 0
     green_ml_bought = 0
     red_ml_bought = 0
@@ -34,16 +43,11 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
             red_ml_bought += (barrel.ml_per_barrel * barrel.quantity)
         elif barrel.potion_type == [0, 0, 1, 0]:
             blue_ml_bought += (barrel.ml_per_barrel * barrel.quantity)
+        else:
+            raise Exception("Invalid Potion Type")
     with db.engine.begin() as connection:
-        num_green_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
-        num_red_ml = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory")).scalar()
-        num_blue_ml = connection.execute(sqlalchemy.text("SELECT num_blue_ml FROM global_inventory")).scalar()
-        num_gold = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
-        num_green_ml += green_ml_bought
-        num_red_ml += red_ml_bought
-        num_blue_ml += blue_ml_bought
-        num_gold -= spent
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = {num_gold}, num_green_ml = {num_green_ml}, num_red_ml = {num_red_ml}, num_blue_ml = {num_blue_ml}"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = gold - :spent, num_green_ml = num_green_ml + :green_ml_bought, num_red_ml = num_red_ml + :red_ml_bought, num_blue_ml = num_blue_ml + :blue_ml_bought"),
+                           [{"spent": spent, "green_ml_bought": green_ml_bought, "red_ml_bought": red_ml_bought, "blue_ml_bought": blue_ml_bought}])
     print(f"barrels delievered: {barrels_delivered} order_id: {order_id}")
     return "OK"
 
