@@ -35,6 +35,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
     green_ml_bought = 0
     red_ml_bought = 0
     blue_ml_bought = 0
+    dark_ml_bought = 0
     for barrel in barrels_delivered:
         spent += (barrel.price * barrel.quantity)
         if barrel.potion_type == [0, 1, 0, 0]:
@@ -43,11 +44,15 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
             red_ml_bought += (barrel.ml_per_barrel * barrel.quantity)
         elif barrel.potion_type == [0, 0, 1, 0]:
             blue_ml_bought += (barrel.ml_per_barrel * barrel.quantity)
+        elif barrel.potion_type == [0, 0, 0, 1]:
+            dark_ml_bought += (barrel.ml_per_barrel * barrel.quantity)
         else:
-            raise Exception("Invalid Potion Type")
+            raise Exception("Invalid Barrel Type")
     with db.engine.begin() as connection:
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = gold - :spent, num_green_ml = num_green_ml + :green_ml_bought, num_red_ml = num_red_ml + :red_ml_bought, num_blue_ml = num_blue_ml + :blue_ml_bought"),
-                           [{"spent": spent, "green_ml_bought": green_ml_bought, "red_ml_bought": red_ml_bought, "blue_ml_bought": blue_ml_bought}])
+        connection.execute(sqlalchemy.text(
+            f"UPDATE global_inventory SET gold = gold - :spent, num_green_ml = num_green_ml + :green_ml_bought, 
+            num_red_ml = num_red_ml + :red_ml_bought, num_blue_ml = num_blue_ml + :blue_ml_bought, num_dark_ml = num_dark_ml + :dark_ml_bought"),
+            [{"spent": spent, "green_ml_bought": green_ml_bought, "red_ml_bought": red_ml_bought, "blue_ml_bought": blue_ml_bought, "dark_ml_bought": dark_ml_bought}])
     print(f"barrels delievered: {barrels_delivered} order_id: {order_id}")
     return "OK"
 
