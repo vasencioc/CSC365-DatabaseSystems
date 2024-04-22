@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from src.api import auth
 from enum import Enum
 import sqlalchemy
-from typing import Dict
 from src import database as db
 
 router = APIRouter(
@@ -85,11 +84,12 @@ def post_visits(visit_id: int, customers: list[Customer]):
             Name = customer.customer_name
             Class = customer.character_class
             Level = customer.level
-            search = conn.execute(sqlalchemy.text("SELECT * FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
+            customerID = conn.execute(sqlalchemy.text("SELECT customer_id FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
                          [{"Name": Name, "Level": Level, "Class":Class}])
-            if (not search):
-                conn.execute(sqlalchemy.text("INSERT INTO customers (name, level, class) VALUES (:Name, :Level, :Class)"),
+            if (not customerID):
+                customerID = conn.execute(sqlalchemy.text("INSERT INTO customers (name, level, class) VALUES (:Name, :Level, :Class) RETURNING customer_id"),
                          [{"Name": Name, "Level": Level, "Class":Class}])
+            conn.execute(sqlalchemy.text("INSERT INTO visits (customer_id) VALUES (:customerID)"), [{"customerID": customerID}])
     print(customers)
     return "OK"
 
