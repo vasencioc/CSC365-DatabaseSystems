@@ -15,7 +15,7 @@ router = APIRouter(
 def get_inventory():
     """ """
     with db.engine.begin() as conn:
-        num_potions = conn.execute(sqlalchemy.text("SELECT SUM(quanity) FROM potions"))
+        num_potions = conn.execute(sqlalchemy.text("SELECT SUM(inventory) FROM potions"))
         num_ml = conn.execute(sqlalchemy.text("SELECT num_red_ml + num_green_ml + num_blue_ml + num_dark_ml FROM shop_inventory"))
         num_gold = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory"))
     return {"number_of_potions": num_potions, "ml_in_barrels": num_ml, "gold": num_gold}

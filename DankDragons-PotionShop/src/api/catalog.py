@@ -12,13 +12,13 @@ def get_catalog():
     """
     catalog = []
     with db.engine.begin() as conn:
-        inventory = conn.execute(sqlalchemy.text("SELECT * FROM potions"))
-        for sku, name, quantity, price, red_ml, green_ml, blue_ml, dark_ml in inventory:
-            if quantity != 0:
+        my_inventory = conn.execute(sqlalchemy.text("SELECT * FROM potions"))
+        for sku, name, inventory, price, red_ml, green_ml, blue_ml, dark_ml in my_inventory:
+            if inventory != 0:
                 catalog.append({
                     "sku": sku,
                     "name": name,
-                    "quantity": quantity,
+                    "quantity": inventory,
                     "price": price,
                     "potion_type": [red_ml, green_ml, blue_ml, dark_ml]
                 })
