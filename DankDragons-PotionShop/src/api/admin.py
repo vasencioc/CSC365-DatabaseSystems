@@ -19,6 +19,6 @@ def reset():
     with db.engine.begin() as conn:
         conn.execute(sqlalchemy.text(
             "UPDATE shop_inventory SET num_green_ml = 0, num_red_ml = 0, num_blue_ml = 0, num_dark_ml = 0, gold = 100"))
-        conn.execute(sqlalchemy.text("UPDATE shop_inventory SET quantity = 0"))
-        conn.execute(sqlalchemy.text("TRUNCATE customers"))
+        conn.execute(sqlalchemy.text("UPDATE potions SET inventory = 0"))
+        conn.execute(sqlalchemy.text("TRUNCATE customers CASCADE"))
     return "OK"

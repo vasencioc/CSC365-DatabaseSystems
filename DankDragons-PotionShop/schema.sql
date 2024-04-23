@@ -47,7 +47,7 @@ CREATE table
 
 CREATE table
   visits (
-    visit_id int generated always as identity not null PRIMARY KEY,
-    visited_at timestamp with time zone null default now(),
-    customer_id int REFERENCES Customers (customer_id)
+    visit_id int not null PRIMARY KEY,
+    customer_id int REFERENCES customers (customer_id),
+    created_at timestamp with time zone null default now()
   );

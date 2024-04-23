@@ -26,7 +26,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     with db.engine.begin() as conn:
         for potion in potions_delivered:
             conn.execute(sqlalchemy.text(
-                "UPDATE potions SET inventory = inventory + new_pots WHERE red_ml = :red AND green_ml = :green AND blue_ml = :blue AND dark_ml = :dark"),
+                "UPDATE potions SET inventory = inventory + :new_pots WHERE red_ml = :red AND green_ml = :green AND blue_ml = :blue AND dark_ml = :dark"),
                          [{"new_pots": potion.quantity, "red": potion.potion_type[0], "green": potion.potion_type[1], "blue": potion.potion_type[2], "dark": potion.potion_type[3]}])
             red_ml_used += potion.potion_type[0]
             green_ml_used += potion.potion_type[1]
