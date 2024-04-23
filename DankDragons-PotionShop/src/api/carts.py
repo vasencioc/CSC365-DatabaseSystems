@@ -128,12 +128,12 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     total_paid = 0
     total_bought = 0
     with db.engine.begin() as conn:
-        bank = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
-        items = conn.execute(sqlalchemy.text("SELECT * FROM cart_items WHERE  cart_id = :cart_id"))
+        items = conn.execute(sqlalchemy.text("SELECT * FROM cart_items JOIN carts ON cart_items.cart_id = carts.cart_id WHERE cart_id = :cartID"),
+                             [{"cartID": cart_id}])
         for item in items:
-            item_bought = conn.execute(sqlalchemy.text("SELECT potion FROM item"))
-            quanity_bought = conn.execute(sqlalchemy.text("SELECT quantity FROM item"))
-
-        bank += total_paid
-        conn.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_green_potions = {green_inventory}, num_red_potions = {red_inventory}, num_blue_potions = {blue_inventory}, gold = {bank}"))
+            total_bought += item.quantity
+            conn.execute(sqlalchemy.text("UPDATE potions SET quantity = quantity - item.quantity WHERE item.potion = potions.name"))
+            spent = item.quantity * item.price
+            total_paid += spent
+            conn.execute(sqlalchemy.text("UPDATE shop_inventory SET gold = gold - spent"), [{"spent": spent}])
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}

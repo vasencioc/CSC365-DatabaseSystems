@@ -273,7 +273,7 @@ Return a summary of your current number of potions, ml, and gold.
   "number_of_potions": "number",
   "ml_in_barrels": "number",
   "gold": "number"
-)
+}
 ```  
 
 ### 6.2 Get capacity purchase plan - `/inventory/plan` (POST)

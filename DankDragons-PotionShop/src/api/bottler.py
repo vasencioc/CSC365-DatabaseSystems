@@ -39,40 +39,35 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
 
 @router.post("/plan")
 def get_bottle_plan():
+    plan = {}
     with db.engine.begin() as connection:
         green_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
         red_ml = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory")).scalar()
         blue_ml = connection.execute(sqlalchemy.text("SELECT num_blue_ml FROM global_inventory")).scalar()
-    while green_ml >= 100:
-        green_bottles += 1
-        green_ml -= 100
-    if green_bottles:
-        plan.append({
-                "potion_type": [0, 100, 0, 0],
-                "quantity": green_bottles,
-            })
-    while red_ml >= 100:
-        red_bottles += 1
-        red_ml -= 100
-    if red_bottles:
-        plan.append({
-                "potion_type": [100, 0, 0, 0],
-                "quantity": red_bottles,
-            })
-    while blue_ml >= 100:
-        blue_bottles += 1
-        blue_ml -= 100
-    if blue_bottles:
-        plan.append({
-                "potion_type": [0, 0, 100, 0],
-                "quantity": blue_bottles,
-            })
-    # Each bottle has a quantity of what proportion of red, green, blue, and
-    # dark potion to add.
-    # Expressed in integers from 1 to 100 that must sum up to 100.
-
-    # Initial logic: bottle all barrels into red potions.
-
+        while green_ml >= 100:
+            green_bottles += 1
+            green_ml -= 100
+        if green_bottles:
+            plan.append({
+                    "potion_type": [0, 100, 0, 0],
+                    "quantity": green_bottles,
+                })
+        while red_ml >= 100:
+            red_bottles += 1
+            red_ml -= 100
+        if red_bottles:
+            plan.append({
+                    "potion_type": [100, 0, 0, 0],
+                    "quantity": red_bottles,
+                })
+        while blue_ml >= 100:
+            blue_bottles += 1
+            blue_ml -= 100
+        if blue_bottles:
+            plan.append({
+                    "potion_type": [0, 0, 100, 0],
+                    "quantity": blue_bottles,
+                })
     return plan
 
 if __name__ == "__main__":

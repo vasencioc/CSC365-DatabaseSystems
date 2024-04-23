@@ -14,15 +14,11 @@ router = APIRouter(
 @router.get("/audit")
 def get_inventory():
     """ """
-    catalog = {}
     with db.engine.begin() as conn:
-        inventory = conn.execute(sqlalchemy.text("SELECT * FROM potions"))
-        for name, quantity in inventory:
-                catalog.append()
-    return {"number_of_green_potions": num_green_potions, "green_ml_in_barrels": num_green_ml,
-            "number_of_red_potions": num_red_potions, "red_ml_in_barrels": num_red_ml,
-            "number_of_blue_potions": num_blue_potions, "blue_ml_in_barrels": num_blue_ml,
-            "gold": num_gold}
+        num_potions = conn.execute(sqlalchemy.text("SELECT SUM(quanity) FROM potions"))
+        num_ml = conn.execute(sqlalchemy.text("SELECT num_red_ml + num_green_ml + num_blue_ml + num_dark_ml FROM shop_inventory"))
+        num_gold = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory"))
+    return {"number_of_potions": num_potions, "ml_in_barrels": num_ml, "gold": num_gold}
 
 # Gets called once a day
 @router.post("/plan")
@@ -31,7 +27,6 @@ def get_capacity_plan():
     Start with 1 capacity for 50 potions and 1 capacity for 10000 ml of potion. Each additional 
     capacity unit costs 1000 gold.
     """
-
     return {
         "potion_capacity": 0,
         "ml_capacity": 0
@@ -48,5 +43,4 @@ def deliver_capacity_plan(capacity_purchase : CapacityPurchase, order_id: int):
     Start with 1 capacity for 50 potions and 1 capacity for 10000 ml of potion. Each additional 
     capacity unit costs 1000 gold.
     """
-
     return "OK"
