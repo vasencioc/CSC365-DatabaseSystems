@@ -50,34 +50,47 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     purchase = []
     print(wholesale_catalog)
     with db.engine.begin() as conn:
-        low_potion = conn.execute
-        red_needed = conn.execute(sqlalchemy.text("SELECT SUM(red_ml) FROM potions ORDER BY quantity ASC LIMIT 1"))
-        green_needed = conn.execute(sqlalchemy.text("SELECT SUM(green_ml) FROM potions WHERE inventory < 10"))
-        blue_needed = conn.execute(sqlalchemy.text("SELECT SUM(blue_ml) FROM potions WHERE inventory < 10"))
-        dark_needed = conn.execute(sqlalchemy.text("SELECT SUM(dark_ml) FROM potions WHERE inventory < 10"))
-        wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
-    
+        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY quantity ASC LIMIT 1"))
+        potions_needed = conn.execute(sqlalchemy.text("SELECT SUM(inventory)FROM potions")).scalar() - 50
+        if(potions_needed != 0):
+            red_needed = conn.execute(sqlalchemy.text("SELECT SUM(red_ml) FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            green_needed = conn.execute(sqlalchemy.text("SELECT SUM(green_ml) FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            blue_needed = conn.execute(sqlalchemy.text("SELECT SUM(blue_ml) FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            dark_needed = conn.execute(sqlalchemy.text("SELECT SUM(dark_ml) FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
     #traverse catalog
     for barrel in wholesale_catalog:
-        # if GREEN barrel in catalog
-        if barrel.potion_type == [0,1, 0, 0] and barrel.quantity and barrel.price < wallet: 
-            wallet -= barrel.price
-            purchase.append({
-                "sku": barrel.sku,
-                "quantity": 1,
-            })
-        # # if RED barrel in catalog
-        elif (barrel.potion_type == [1, 0, 0, 0]) and barrel.quantity and barrel.price < wallet:
-            wallet -= barrel.price
-            purchase.append({
-                "sku": barrel.sku,
-                "quantity": 1,
-            })
-        # # if BLUE barrel in catalog
-        elif barrel.potion_type == [0, 0, 1, 0] and barrel.quantity and barrel.price < wallet:
-            wallet -= barrel.price
-            purchase.append({
-                "sku": barrel.sku,
-                "quantity": 1,
-            })
+        while(red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0):
+            # if GREEN barrel in catalog
+            if barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
+                wallet -= barrel.price
+                green_needed -= barrel.ml_per_barrel
+                purchase.append({
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
+            # if RED barrel in catalog
+            elif (barrel.potion_type == [1, 0, 0, 0]) and red_needed > 0 and barrel.quantity and barrel.price < wallet:
+                wallet -= barrel.price
+                green_needed -= barrel.ml_per_barrel
+                purchase.append({
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
+            # if BLUE barrel in catalog
+            elif barrel.potion_type == [0, 0, 1, 0] and blue_needed > 0 and barrel.quantity and barrel.price < wallet:
+                wallet -= barrel.price
+                green_needed -= barrel.ml_per_barrel
+                purchase.append({
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
+                # if DARK barrel in catalog
+            elif barrel.potion_type == [0, 0, 0, 1] and dark_needed > 0 and barrel.quantity and barrel.price < wallet:
+                wallet -= barrel.price
+                green_needed -= barrel.ml_per_barrel
+                purchase.append({
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
     return purchase

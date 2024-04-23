@@ -27,7 +27,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
         for potion in potions_delivered:
             conn.execute(sqlalchemy.text(
                 "UPDATE potions SET quantity = quantity + new_pots WHERE red_ml = :red AND green_ml = :green AND blue_ml = :blue AND dark_ml = :dark"),
-                [{"new_pots": potion.quantity, "red": potion.potion_type[0], "green": potion.potion_type[1], "blue": potion.potion_type[2], "dark": potion.potion_type[3]}])
+                         [{"new_pots": potion.quantity, "red": potion.potion_type[0], "green": potion.potion_type[1], "blue": potion.potion_type[2], "dark": potion.potion_type[3]}])
             red_ml_used += potion.potion_type[0]
             green_ml_used += potion.potion_type[1]
             blue_ml_used += potion.potion_type[2]
@@ -40,11 +40,33 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
 @router.post("/plan")
 def get_bottle_plan():
     plan = {}
-    with db.engine.begin() as connection:
-        green_ml = connection.execute(sqlalchemy.text("SELECT num_green_ml FROM global_inventory")).scalar()
-        red_ml = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory")).scalar()
-        blue_ml = connection.execute(sqlalchemy.text("SELECT num_blue_ml FROM global_inventory")).scalar()
-        while green_ml >= 100:
+    with db.engine.begin() as conn:
+        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY quantity ASC LIMIT 1"))
+        green_needed = conn.execute(sqlalchemy.text("SELECT green_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
+        red_needed = conn.execute(sqlalchemy.text("SELECT red_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
+        blue_needed = conn.execute(sqlalchemy.text("SELECT blue_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
+        dark_needed = conn.execute(sqlalchemy.text("SELECT dark_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
+        green_stock = conn.execute(sqlalchemy.text("SELECT num_green_ml FROM shop_inventory"))
+        red_stock = conn.execute(sqlalchemy.text("SELECT num_red_ml FROM shop_inventory"))
+        blue_stock = conn.execute(sqlalchemy.text("SELECT num_blue_ml FROM shop_inventory"))
+        dark_stock = conn.execute(sqlalchemy.text("SELECT num_dark_ml FROM shop_inventory"))
+        low_quantity = 0
+        green_bottles = 0
+        red_bottles = 0
+        blue_bottles = 0
+        dark_bottles = 0
+        while(green_stock >= green_needed and red_stock >= red_needed and blue_stock >= blue_needed and dark_stock >= dark_needed):
+            green_stock -= green_needed
+            red_stock -= red_needed
+            blue_stock -= blue_needed
+            dark_stock -= dark_needed
+            low_quantity += 1
+        if low_quantity:
+            plan.append({
+                    "potion_type": [red_needed, green_needed, blue_needed, dark_needed],
+                    "quantity": low_potion,
+                })
+        while green_stock >= 100:
             green_bottles += 1
             green_ml -= 100
         if green_bottles:
@@ -67,6 +89,14 @@ def get_bottle_plan():
             plan.append({
                     "potion_type": [0, 0, 100, 0],
                     "quantity": blue_bottles,
+                })
+        while dark_ml >= 100:
+            dark_bottles += 1
+            dark_ml -= 100
+        if dark_bottles:
+            plan.append({
+                    "potion_type": [0, 0, 0, 100],
+                    "quantity": dark_bottles,
                 })
     return plan
 
