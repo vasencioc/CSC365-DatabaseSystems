@@ -49,29 +49,32 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
     purchase = []
     print(wholesale_catalog)
-    with db.engine.begin() as connection:
-        num_green = connection.execute(sqlalchemy.text("SELECT num_green_potions FROM global_inventory")).scalar()
-        num_red = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).scalar()
-        num_blue = connection.execute(sqlalchemy.text("SELECT num_blue_potions FROM global_inventory")).scalar()
-        wallet = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).scalar()
+    with db.engine.begin() as conn:
+        low_potion = conn.execute
+        red_needed = conn.execute(sqlalchemy.text("SELECT SUM(red_ml) FROM potions ORDER BY quantity ASC LIMIT 1"))
+        green_needed = conn.execute(sqlalchemy.text("SELECT SUM(green_ml) FROM potions WHERE inventory < 10"))
+        blue_needed = conn.execute(sqlalchemy.text("SELECT SUM(blue_ml) FROM potions WHERE inventory < 10"))
+        dark_needed = conn.execute(sqlalchemy.text("SELECT SUM(dark_ml) FROM potions WHERE inventory < 10"))
+        wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
+    
     #traverse catalog
     for barrel in wholesale_catalog:
         # if GREEN barrel in catalog
-        if barrel.potion_type == [0,1, 0, 0] and num_green < 10 and barrel.quantity and barrel.price < wallet: 
+        if barrel.potion_type == [0,1, 0, 0] and barrel.quantity and barrel.price < wallet: 
             wallet -= barrel.price
             purchase.append({
                 "sku": barrel.sku,
                 "quantity": 1,
             })
         # # if RED barrel in catalog
-        elif (barrel.potion_type == [1, 0, 0, 0]) and num_red < 10 and barrel.quantity and barrel.price < wallet:
+        elif (barrel.potion_type == [1, 0, 0, 0]) and barrel.quantity and barrel.price < wallet:
             wallet -= barrel.price
             purchase.append({
                 "sku": barrel.sku,
                 "quantity": 1,
             })
         # # if BLUE barrel in catalog
-        elif barrel.potion_type == [0, 0, 1, 0] and num_blue < 10 and barrel.quantity and barrel.price < wallet:
+        elif barrel.potion_type == [0, 0, 1, 0] and barrel.quantity and barrel.price < wallet:
             wallet -= barrel.price
             purchase.append({
                 "sku": barrel.sku,
