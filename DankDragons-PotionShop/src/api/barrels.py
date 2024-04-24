@@ -20,6 +20,7 @@ class Barrel(BaseModel):
 @router.post("/deliver/{order_id}")
 def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
     ""
+    capacity = 10000
     green_ml_bought = 0
     red_ml_bought = 0
     blue_ml_bought = 0
@@ -54,10 +55,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1")).scalar_one()
         potions_needed = conn.execute(sqlalchemy.text("SELECT SUM(inventory)FROM potions")).scalar() - 50
         if(potions_needed != 0):
-            red_needed = conn.execute(sqlalchemy.text("SELECT SUM(red_ml) FROM potions WHERE name = :potion"), [{"potion": low_potion}]).scalar()
-            green_needed = conn.execute(sqlalchemy.text("SELECT green_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
-            blue_needed = conn.execute(sqlalchemy.text("SELECT blue_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
-            dark_needed = conn.execute(sqlalchemy.text("SELECT dark_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("SELECT red_ml, green_ml, blue_ml, dark_ml FROM potions WHERE name = :potion"), [{"potion": low_potion}]).scalar()
             wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
     #traverse catalog
     for barrel in wholesale_catalog:

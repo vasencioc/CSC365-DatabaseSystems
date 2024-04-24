@@ -128,15 +128,18 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     total_paid = 0
     total_bought = 0
     with db.engine.begin() as conn:
-        items = conn.execute(sqlalchemy.text("SELECT potion, quantity FROM cart_items JOIN carts ON cart_items.cart_id = carts.cart_id WHERE carts.cart_id = :cartID"),
-                             {"cartID": cart_id}).scalar()
-        for potion, quantity in items:
-            total_bought += quantity
-            conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory - :item_quantity WHERE sku = :item_potion"), [{"item_quantity": quantity, "item_potion": potion}])
-            price = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :item_potion"), {"item_potion": potion})
-            spent = quantity * price
+        items = conn.execute(sqlalchemy.text("""
+                                             SELECT potion, quantity, price
+                                            FROM cart_items 
+                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                            JOIN potions ON potions.sku = cart_items.potion
+                                            WHERE carts.cart_id = :cartID"""),
+                             {"cartID": cart_id})
+        for item in items:
+            total_bought += item.quantity
+            conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory - :item_quantity WHERE sku = :item_potion"), [{"item_quantity": item.quantity, "item_potion": item.potion}])
+            
+            spent = item.quantity * item.price
             total_paid += spent
             conn.execute(sqlalchemy.text("UPDATE shop_inventory SET gold = gold - :spent"), {"spent": spent})
-        conn.execute(sqlalchemy.text("DELETE FROM cart_items WHERE cart_id = :cartID"), {"cartID":cart_id})
-        conn.execute(sqlalchemy.text("DELETE FROM carts WHERE cart_id = :cartID"), {"cartID":cart_id})
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
