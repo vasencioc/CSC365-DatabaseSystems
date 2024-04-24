@@ -24,6 +24,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
     red_ml_bought = 0
     blue_ml_bought = 0
     dark_ml_bought = 0
+    spent = 0
     for barrel in barrels_delivered:
         spent += (barrel.price * barrel.quantity)
         if barrel.potion_type == [0, 1, 0, 0]:
@@ -38,7 +39,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
             raise Exception("Invalid Barrel Type")
     with db.engine.begin() as connection:
         connection.execute(sqlalchemy.text(
-            "UPDATE global_inventory SET gold = gold - :spent, num_green_ml = num_green_ml + :green_ml_bought, num_red_ml = num_red_ml + :red_ml_bought, num_blue_ml = num_blue_ml + :blue_ml_bought, num_dark_ml = num_dark_ml + :dark_ml_bought"),
+            "UPDATE shop_inventory SET gold = gold - :spent, num_green_ml = num_green_ml + :green_ml_bought, num_red_ml = num_red_ml + :red_ml_bought, num_blue_ml = num_blue_ml + :blue_ml_bought, num_dark_ml = num_dark_ml + :dark_ml_bought"),
             [{"spent": spent, "green_ml_bought": green_ml_bought, "red_ml_bought": red_ml_bought, "blue_ml_bought": blue_ml_bought, "dark_ml_bought": dark_ml_bought}])
     print(f"barrels delievered: {barrels_delivered} order_id: {order_id}")
     return "OK"
@@ -60,7 +61,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
     #traverse catalog
     for barrel in wholesale_catalog:
-        while(red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0):
+        if(red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0):
             # if GREEN barrel in catalog
             if barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
                 wallet -= barrel.price

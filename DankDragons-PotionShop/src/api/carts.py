@@ -102,7 +102,7 @@ def create_cart(new_cart: Customer):
     with db.engine.begin() as conn:
         id = conn.execute(sqlalchemy.text("SELECT customer_id FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
                          [{"Name": Name, "Level": Level, "Class":Class}]).scalar()
-        cartID = conn.execute(sqlalchemy.text("INSERT INTO carts (customer_id) VALUES (id) RETURNING cart_id"), [{"id": id}]).scalar()
+        cartID = conn.execute(sqlalchemy.text("INSERT INTO carts (customer_id) VALUES (:id) RETURNING cart_id"), [{"id": id}]).scalar()
     return {"cart_id": cartID}
 
 class CartItem(BaseModel):
@@ -113,7 +113,7 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     with db.engine.begin() as conn:
-        customerID = conn.execute(sqlalchemy.text("SELECT customer_id FROM carts WHERE cart_id = cartID"), [{"cartID": cart_id}]).scalar()
+        customerID = conn.execute(sqlalchemy.text("SELECT customer_id FROM carts WHERE cart_id = :cartID"), [{"cartID": cart_id}]).scalar()
         conn.execute(sqlalchemy.text("INSERT INTO cart_items (cart_id, customer_id, potion, quantity) VALUES (:cartID, :customerID, :sku, :quantity)"),
                      [{"cartID": cart_id, "customerID": customerID, "sku": item_sku, "quantity": cart_item.quantity}])
     return "OK"
@@ -128,12 +128,15 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     total_paid = 0
     total_bought = 0
     with db.engine.begin() as conn:
-        items = conn.execute(sqlalchemy.text("SELECT * FROM cart_items JOIN carts ON cart_items.cart_id = carts.cart_id WHERE cart_id = :cartID"),
-                             [{"cartID": cart_id}])
-        for item in items:
-            total_bought += item.quantity
-            conn.execute(sqlalchemy.text("UPDATE potions SET quantity = quantity - item.quantity WHERE item.potion = potions.name"))
-            spent = item.quantity * item.price
+        items = conn.execute(sqlalchemy.text("SELECT potion, quantity FROM cart_items JOIN carts ON cart_items.cart_id = carts.cart_id WHERE carts.cart_id = :cartID"),
+                             {"cartID": cart_id}).scalar()
+        for potion, quantity in items:
+            total_bought += quantity
+            conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory - :item_quantity WHERE sku = :item_potion"), [{"item_quantity": quantity, "item_potion": potion}])
+            price = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :item_potion"), {"item_potion": potion})
+            spent = quantity * price
             total_paid += spent
-            conn.execute(sqlalchemy.text("UPDATE shop_inventory SET gold = gold - spent"), [{"spent": spent}])
+            conn.execute(sqlalchemy.text("UPDATE shop_inventory SET gold = gold - :spent"), {"spent": spent})
+        conn.execute(sqlalchemy.text("DELETE FROM cart_items WHERE cart_id = :cartID"), {"cartID":cart_id})
+        conn.execute(sqlalchemy.text("DELETE FROM carts WHERE cart_id = :cartID"), {"cartID":cart_id})
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
