@@ -41,7 +41,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
 def get_bottle_plan():
     plan = {}
     with db.engine.begin() as conn:
-        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1"))
+        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1")).scalar_one()
         green_needed = conn.execute(sqlalchemy.text("SELECT green_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
         red_needed = conn.execute(sqlalchemy.text("SELECT red_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
         blue_needed = conn.execute(sqlalchemy.text("SELECT blue_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()

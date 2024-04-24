@@ -50,10 +50,10 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     purchase = []
     print(wholesale_catalog)
     with db.engine.begin() as conn:
-        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1"))
+        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1")).scalar_one()
         potions_needed = conn.execute(sqlalchemy.text("SELECT SUM(inventory)FROM potions")).scalar() - 50
         if(potions_needed != 0):
-            red_needed = conn.execute(sqlalchemy.text("SELECT red_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
+            red_needed = conn.execute(sqlalchemy.text("SELECT SUM(red_ml) FROM potions WHERE name = :potion"), [{"potion": low_potion}]).scalar()
             green_needed = conn.execute(sqlalchemy.text("SELECT green_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
             blue_needed = conn.execute(sqlalchemy.text("SELECT blue_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
             dark_needed = conn.execute(sqlalchemy.text("SELECT dark_ml FROM potions WHERE name = :potion"),[{"potion": low_potion}]).scalar()
