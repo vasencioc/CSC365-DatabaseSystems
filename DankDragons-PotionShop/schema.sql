@@ -51,3 +51,43 @@ CREATE table
     customer_id int REFERENCES customers (customer_id),
     created_at timestamp with time zone null default now()
   );
+
+
+CREATE table
+  potion_transactions (
+    transaction_id int generated always as identity not null PRIMARY KEY,
+    created_at timestamp with time zone null default now(),
+    description text not null
+  );
+
+CREATE table
+  potion_ledger_entries (
+    ledger_id int generated always as identity not null PRIMARY KEY,
+    created_at timestamp with time zone null default now(),
+    potion_sku int REFERENCES  potions (sku),
+    transaction int REFERENCES potion_transactions (transaction_id),
+    change int not null
+  );
+
+CREATE table
+  global_inventory (
+    item_id int generated always as identity not null PRIMARY KEY,
+    item text not null,
+    amount int not null
+  );
+
+CREATE table
+  shop_transactions (
+    transaction_id int generated always as identity not null PRIMARY KEY,
+    created_at timestamp with time zone null default now(),
+    description text not null
+  );
+
+CREATE table
+  shop_ledger_entries (
+    ledger_id int generated always as identity not null PRIMARY KEY,
+    created_at timestamp with time zone null default now(),
+    item_id int REFERENCES  global_inventory (item_id),
+    transaction int REFERENCES shop_transactions (transaction_id),
+    change int not null
+  );

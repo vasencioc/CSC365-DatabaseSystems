@@ -25,16 +25,50 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     dark_ml_used = 0
     with db.engine.begin() as conn:
         for potion in potions_delivered:
-            conn.execute(sqlalchemy.text(
-                "UPDATE potions SET inventory = inventory + :new_pots WHERE red_ml = :red AND green_ml = :green AND blue_ml = :blue AND dark_ml = :dark"),
-                         [{"new_pots": potion.quantity, "red": potion.potion_type[0], "green": potion.potion_type[1], "blue": potion.potion_type[2], "dark": potion.potion_type[3]}])
-            red_ml_used += potion.potion_type[0]
-            green_ml_used += potion.potion_type[1]
-            blue_ml_used += potion.potion_type[2]
-            dark_ml_used += potion.potion_type[3]
-        conn.execute(sqlalchemy.text(
-                "UPDATE shop_inventory SET num_red_ml = num_red_ml - :red_used, num_green_ml = num_green_ml - :green_used, num_blue_ml = num_blue_ml - :blue_used, num_dark_ml = num_dark_ml -:dark_used"),
-                [{"red_used": red_ml_used, "green_used": green_ml_used, "blue_used": blue_ml_used, "dark_used":dark_ml_used}])
+            if potion.potion_type == [0, 1, 0, 0]:
+                transaction = conn.execute(sqlalchemy.text("INSERT INTO potion_transactions (description) VALUES ('Night Vision Potions Delivered') RETURNING transaction_id")).scalar()
+                conn.execute(sqlalchemy.text("""
+                                           INSERT INTO potion_ledger_entries (potion_sku, transaction, change)
+                                           VALUES(:potion_id, :transaction, :quantity),
+                                           """),[{"potion_id": 2, "transaction": transaction, "quantity": potion.quantity}])
+            elif potion.potion_type == [1, 0, 0, 0]:
+                transaction = conn.execute(sqlalchemy.text("INSERT INTO potion_transactions (description) VALUES ('Love Potions Delivered') RETURNING transaction_id")).scalar()
+                conn.execute(sqlalchemy.text("""
+                                           INSERT INTO potion_ledger_entries (potion_sku, transaction, change)
+                                           VALUES(:potion_id, :transaction, :quantity),
+                                           """),[{"potion_id": 1, "transaction": transaction, "quantity": potion.quantity}])
+            elif potion.potion_type == [0, 0, 1, 0]:
+                transaction = conn.execute(sqlalchemy.text("INSERT INTO potion_transactions (description) VALUES ('Floatation Potions Delivered') RETURNING transaction_id")).scalar()
+                conn.execute(sqlalchemy.text("""
+                                           INSERT INTO potion_ledger_entries (potion_sku, transaction, change)
+                                           VALUES(:potion_id, :transaction, :quantity),
+                                           """),[{"potion_id": 3, "transaction": transaction, "quantity": potion.quantity}])
+            elif potion.potion_type == [0, 0, 0, 1]:
+                transaction = conn.execute(sqlalchemy.text("INSERT INTO potion_transactions (description) VALUES ('Invisibility Potions Delivered') RETURNING transaction_id")).scalar()
+                conn.execute(sqlalchemy.text("""
+                                           INSERT INTO potion_ledger_entries (potion_sku, transaction, change)
+                                           VALUES(:potion_id, :transaction, :quantity),
+                                           """),[{"potion_id": 4, "transaction": transaction, "quantity": potion.quantity}])
+            else:
+                raise Exception("Invalid Barrel Type")
+        red_change = conn.execute(sqlalchemy.text("SELECT SUM(change) FROM potion_ledger_entries WHERE potion_sku = :sku"), [{"sku": 1}]).scalar()
+        green_change = conn.execute(sqlalchemy.text("SELECT SUM(change) FROM potion_ledger_entries WHERE potion_sku = :sku"), [{"sku": 2}]).scalar()
+        blue_change = conn.execute(sqlalchemy.text("SELECT SUM(change) FROM potion_ledger_entries WHERE potion_sku = :sku"), [{"sku": 3}]).scalar()
+        dark_change = conn.execute(sqlalchemy.text("SELECT SUM(change) FROM potion_ledger_entries WHERE potion_sku = :sku"), [{"sku": 4}]).scalar()
+        conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory + :change WHERE potion_sku = :sku"),[{"change": red_change,"sku": 1}])
+        conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory + :change WHERE potion_sku = :sku"),[{"change": green_change,"sku": 2}])
+        conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory + :change WHERE potion_sku = :sku"),[{"change": blue_change,"sku": 3}])
+        conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory + :change WHERE potion_sku = :sku"),[{"change": dark_change,"sku": 4}])
+            # conn.execute(sqlalchemy.text(
+            #     "UPDATE potions SET inventory = inventory + :new_pots WHERE red_ml = :red AND green_ml = :green AND blue_ml = :blue AND dark_ml = :dark"),
+            #              [{"new_pots": potion.quantity, "red": potion.potion_type[0], "green": potion.potion_type[1], "blue": potion.potion_type[2], "dark": potion.potion_type[3]}])
+            # red_ml_used += potion.potion_type[0]
+            # green_ml_used += potion.potion_type[1]
+            # blue_ml_used += potion.potion_type[2]
+            # dark_ml_used += potion.potion_type[3]
+        # conn.execute(sqlalchemy.text(
+        #         "UPDATE shop_inventory SET num_red_ml = num_red_ml - :red_used, num_green_ml = num_green_ml - :green_used, num_blue_ml = num_blue_ml - :blue_used, num_dark_ml = num_dark_ml -:dark_used"),
+        #         [{"red_used": red_ml_used, "green_used": green_ml_used, "blue_used": blue_ml_used, "dark_used":dark_ml_used}])
     return "OK"
 
 @router.post("/plan")
@@ -44,7 +78,7 @@ def get_bottle_plan():
         capacity = 10000
         low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1")).scalar_one()
         red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("SELECT red_ml, green_ml, blue_ml, dark_ml FROM potions WHERE name = :low_potion"), [{"low_potion": low_potion}]).scalar()
-        red_stock, green_stock, blue_stock, dark_stock = conn.execute(sqlalchemy.text("SELECT num_red_ml, num_green_ml, num_blue_ml, num_dark_ml FROM shop_inventory")).scalar()
+        green_stock, red_stock, blue_stock, dark_stock = conn.execute(sqlalchemy.text("SELECT num_green_ml, num_red_ml, num_blue_ml, num_dark_ml FROM shop_inventory")).scalar()
         low_quantity = 0
         green_bottles = 0
         red_bottles = 0
