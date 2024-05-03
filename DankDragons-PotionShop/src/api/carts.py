@@ -128,18 +128,22 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     total_paid = 0
     total_bought = 0
     with db.engine.begin() as conn:
-        items = conn.execute(sqlalchemy.text("""
-                                             SELECT potion, quantity, price
-                                            FROM cart_items 
-                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
-                                            JOIN potions ON potions.sku = cart_items.potion
-                                            WHERE carts.cart_id = :cartID"""),
-                             {"cartID": cart_id})
+        items = conn.execute(sqlalchemy.text("""SELECT potion, quantity, price
+                                                FROM cart_items 
+                                                JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                JOIN potions ON potions.sku = cart_items.potion
+                                                WHERE carts.cart_id = :cartID"""),
+                                            {"cartID": cart_id})
         for item in items:
             total_bought += item.quantity
-            conn.execute(sqlalchemy.text("UPDATE potions SET inventory = inventory - :item_quantity WHERE sku = :item_potion"), [{"item_quantity": item.quantity, "item_potion": item.potion}])
-            
             spent = item.quantity * item.price
-            total_paid += spent
-            conn.execute(sqlalchemy.text("UPDATE shop_inventory SET gold = gold - :spent"), {"spent": spent})
+            conn.execute(sqlalchemy.text("""INSERT INTO potion_ledger (potion_sku, change)
+                                            VALUES(:potion_id, :quantity)"""),
+                                        [{"potion_id": item.potion, "quantity": item.quantity}])
+        total_paid += spent
+        conn.execute(sqlalchemy.text("""
+                                        INSERT INTO gold_ledger (gold)
+                                        VALUES(:total_paid),
+                                        """),
+                                    [{"total_paid": total_paid}])
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
