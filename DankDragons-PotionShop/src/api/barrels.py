@@ -47,20 +47,27 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     # sm $100 -500ml
     # mini $60 -200ml
     purchase = []
+    capacity = 1000
     print(wholesale_catalog)
     with db.engine.begin() as conn:
-        low_potion = conn.execute(sqlalchemy.text("SELECT name FROM potions ORDER BY inventory ASC LIMIT 1")).scalar_one()
-        potions_needed = conn.execute(sqlalchemy.text("SELECT SUM(inventory)FROM potions")).scalar() - 50
-        if(potions_needed != 0):
-            red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("SELECT red_ml, green_ml, blue_ml, dark_ml FROM potions WHERE name = :potion"), [{"potion": low_potion}]).scalar()
-            wallet = conn.execute(sqlalchemy.text("SELECT gold FROM shop_inventory")).scalar()
+        low_potion = conn.execute(sqlalchemy.text("SELECT potion_sku FROM potion_ledger ORDER BY SUM(change) ASC LIMIT 1")).scalar_one()
+        low_inventory = conn.execute(sqlalchemy.text("""
+                                        SELECT SUM(change)
+                                        FROM potion_ledger 
+                                        WHERE potion_sku = :low_potion"""),{"low_potion": low_potion}).scalar()
+        red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("""
+                                                        SELECT red_ml, green_ml, blue_ml, dark_ml 
+                                                        FROM potions WHERE name = :potion"""), [{"potion": low_potion}]).scalar()
+        wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
+        level = conn.execute(sqlalchemy.text("SELECT SUM(red_ml + green_ml + blue_ml + dark_ml) FROM ml_ledger")).scalar()
     #traverse catalog
     for barrel in wholesale_catalog:
-        if(red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0):
+        if((red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0) and level < capacity):
             # if GREEN barrel in catalog
             if barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
                 wallet -= barrel.price
                 green_needed -= barrel.ml_per_barrel
+                level += barrel.ml_per_barrel
                 purchase.append({
                     "sku": barrel.sku,
                     "quantity": 1,
@@ -69,6 +76,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             elif (barrel.potion_type == [1, 0, 0, 0]) and red_needed > 0 and barrel.quantity and barrel.price < wallet:
                 wallet -= barrel.price
                 green_needed -= barrel.ml_per_barrel
+                level += barrel.ml_per_barrel
                 purchase.append({
                     "sku": barrel.sku,
                     "quantity": 1,
@@ -77,6 +85,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             elif barrel.potion_type == [0, 0, 1, 0] and blue_needed > 0 and barrel.quantity and barrel.price < wallet:
                 wallet -= barrel.price
                 green_needed -= barrel.ml_per_barrel
+                level += barrel.ml_per_barrel
                 purchase.append({
                     "sku": barrel.sku,
                     "quantity": 1,
@@ -85,6 +94,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             elif barrel.potion_type == [0, 0, 0, 1] and dark_needed > 0 and barrel.quantity and barrel.price < wallet:
                 wallet -= barrel.price
                 green_needed -= barrel.ml_per_barrel
+                level += barrel.ml_per_barrel
                 purchase.append({
                     "sku": barrel.sku,
                     "quantity": 1,
