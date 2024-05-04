@@ -63,8 +63,17 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     #traverse catalog
     for barrel in wholesale_catalog:
         if((red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0) and level < capacity):
+            # if DARK barrel in catalog
+            if barrel.potion_type == [0, 0, 0, 1] and dark_needed > 0 and barrel.quantity and barrel.price < wallet:
+                wallet -= barrel.price
+                green_needed -= barrel.ml_per_barrel
+                level += barrel.ml_per_barrel
+                purchase.append({
+                    "sku": barrel.sku,
+                    "quantity": 1,
+                })
             # if GREEN barrel in catalog
-            if barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
+            elif barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
                 wallet -= barrel.price
                 green_needed -= barrel.ml_per_barrel
                 level += barrel.ml_per_barrel
@@ -90,13 +99,5 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                     "sku": barrel.sku,
                     "quantity": 1,
                 })
-                # if DARK barrel in catalog
-            elif barrel.potion_type == [0, 0, 0, 1] and dark_needed > 0 and barrel.quantity and barrel.price < wallet:
-                wallet -= barrel.price
-                green_needed -= barrel.ml_per_barrel
-                level += barrel.ml_per_barrel
-                purchase.append({
-                    "sku": barrel.sku,
-                    "quantity": 1,
-                })
+
     return purchase
