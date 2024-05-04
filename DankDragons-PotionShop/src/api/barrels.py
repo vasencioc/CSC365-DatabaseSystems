@@ -50,14 +50,14 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     capacity = 1000
     print(wholesale_catalog)
     with db.engine.begin() as conn:
-        low_potion = conn.execute(sqlalchemy.text("SELECT potion_sku FROM potion_ledger ORDER BY SUM(change) ASC LIMIT 1")).scalar_one()
-        low_inventory = conn.execute(sqlalchemy.text("""
-                                        SELECT SUM(change)
+        low_potion = conn.execute(sqlalchemy.text("""
+                                        SELECT potion_sku 
                                         FROM potion_ledger 
-                                        WHERE potion_sku = :low_potion"""),{"low_potion": low_potion}).scalar()
+                                        GROUP BY potion_sku 
+                                        ORDER BY SUM(change) ASC LIMIT 1"""))
         red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("""
                                                         SELECT red_ml, green_ml, blue_ml, dark_ml 
-                                                        FROM potions WHERE name = :potion"""), [{"potion": low_potion}]).scalar()
+                                                        FROM potions WHERE sku = :potion"""), [{"potion": low_potion}]).scalar()
         wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
         level = conn.execute(sqlalchemy.text("SELECT SUM(red_ml + green_ml + blue_ml + dark_ml) FROM ml_ledger")).scalar()
     #traverse catalog

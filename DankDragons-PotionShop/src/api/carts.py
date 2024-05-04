@@ -81,15 +81,12 @@ def post_visits(visit_id: int, customers: list[Customer]):
     """
     with db.engine.begin() as conn:
         for customer in customers:
-            Name = customer.customer_name
-            Class = customer.character_class
-            Level = customer.level
             customerID = conn.execute(sqlalchemy.text("SELECT customer_id FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
-                         [{"Name": Name, "Level": Level, "Class":Class}]).scalar()
-            if(customerID is None):
-                customerID = conn.execute(sqlalchemy.text("INSERT INTO customers (name, level, class) VALUES (:Name, :Level, :Class) RETURNING customer_id"),
-                         [{"Name": Name, "Level": Level, "Class":Class}]).scalar()
-            conn.execute(sqlalchemy.text("INSERT INTO visits (visit_id, customer_id) VALUES (:visitID, :customerID)"), [{"visitID": visit_id, "customerID": customerID}])
+                         [{"Name": customer.customer_name, "Level": customer.level, "Class": customer.character_class}]).scalar()
+            conn.execute(sqlalchemy.text("""
+                        INSERT INTO visits (customer_id, name, class, level) 
+                        VALUES (:customerID, :Name, :Class, :Level)"""),
+                        [{"Name": customer.customer_name, "Level": customer.level, "Class": customer.character_class}])
     print(customers)
     return "OK"
 
