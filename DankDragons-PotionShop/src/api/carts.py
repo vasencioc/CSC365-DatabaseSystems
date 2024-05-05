@@ -53,19 +53,93 @@ def search_orders(
     Your results must be paginated, the max results you can return at any
     time is 5 total line items.
     """
+    results = []
+
+    with db.engine.begin() as conn:
+        if customer_name and potion_sku:
+            table_results = conn.execute(sqlalchemy.text("""SELECT line_item_id, customers.created_at, quantity
+                                                            FROM cart_items
+                                                            WHERE cart_items.potion = :SKU AND customers.name = :NAME
+                                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                            JOIN potions ON potions.sku = cart_items.potion
+                                                            JOIN customers ON customers.customer_id = cart_items.customer_id
+                                                            ORDER BY (:sort_col) :sort_order"""),
+                                                            [{"sort_col": sort_col, "sort_order": sort_order, "SKU": potion_sku, "Name": customer_name}])
+            if table_results:
+                for line_id, created_at, quantity in table_results:
+                    line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": potion_sku}).scalar()
+                    line_total *= quantity
+                    results.update({
+                "line_item_id": line_id,
+                "item_sku": potion_sku,
+                "customer_name": customer_name,
+                "line_item_total": line_total,
+                "timestamp": created_at,
+            })
+        elif customer_name:
+            table_results = conn.execute(sqlalchemy.text("""SELECT line_item_id, customers.created_at, potion_sku, quantity
+                                                            FROM cart_items
+                                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                            JOIN potions ON potions.sku = cart_items.potion
+                                                            JOIN customers ON customers.customer_id = cart_items.customer_id
+                                                            WHERE customers.name = :NAME
+                                                            ORDER BY (:sort_col) :sort_order"""),
+                                                            [{"sort_col": sort_col, "sort_order": sort_order, "NAME": customer_name}])
+            if table_results:
+                for line_id, created_at, sku, quantity in table_results:
+                    line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()
+                    line_total *= quantity
+                    results.update({
+                "line_item_id": line_id,
+                "item_sku": sku,
+                "customer_name": customer_name,
+                "line_item_total": line_total,
+                "timestamp": created_at,
+            })
+        elif potion_sku:
+            table_results = conn.execute(sqlalchemy.text("""SELECT line_item_id, customers.created_at, customers.name, quantity
+                                                            FROM cart_items
+                                                            WHERE cart_items.potion = :SKU
+                                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                            JOIN potions ON potions.sku = cart_items.potion
+                                                            JOIN customers ON customers.customer_id = cart_items.customer_id
+                                                            ORDER BY (:sort_col) :sort_order"""),
+                                                            [{"sort_col": sort_col, "sort_order": sort_order, "SKU": potion_sku}])
+            if table_results:
+                for line_id, created_at, Name, quantity in table_results:
+                    line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": potion_sku}).scalar()
+                    line_total *= quantity
+                    results.update({
+                "line_item_id": line_id,
+                "item_sku": potion_sku,
+                "customer_name": Name,
+                "line_item_total": line_total,
+                "timestamp": created_at,
+            })
+        else:
+            table_results = conn.execute(sqlalchemy.text("""SELECT line_item_id, customers.created_at, customers.name, potion_sku, quantity
+                                                            FROM cart_items
+                                                            JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                            JOIN potions ON potions.sku = cart_items.potion
+                                                            JOIN customers ON customers.customer_id = cart_items.customer_id
+                                                            ORDER BY (:sort_col) :sort_order"""),
+                                                            [{"sort_col": sort_col, "sort_order": sort_order}])
+            if table_results:
+                for line_id, created_at, Name, sku, quantity in table_results:
+                    line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()
+                    line_total *= quantity
+                    results.update({
+                "line_item_id": line_id,
+                "item_sku": sku,
+                "customer_name": Name,
+                "line_item_total": line_total,
+                "timestamp": created_at,
+            })
 
     return {
         "previous": "",
         "next": "",
-        "results": [
-            {
-                "line_item_id": 1,
-                "item_sku": "1 oblivion potion",
-                "customer_name": "Scaramouche",
-                "line_item_total": 50,
-                "timestamp": "2021-01-01T00:00:00Z",
-            }
-        ],
+        "results": results
     }
 
 
