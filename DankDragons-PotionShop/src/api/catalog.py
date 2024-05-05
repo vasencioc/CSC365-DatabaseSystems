@@ -13,9 +13,11 @@ def get_catalog():
     catalog = []
     with db.engine.begin() as conn:
         my_inventory = conn.execute(sqlalchemy.text("""
-            SELECT potion_sku, name, red_ml, green_ml, blue_ml, dark_ml, price, SUM(change) stock
-            FROM potions
-            JOIN potion_ledger on potion_ledger.potion_sku= potions.sku"""))
+                    SELECT potion_sku, name, red_ml, green_ml, blue_ml, dark_ml, price, SUM(change) as stock
+                    FROM potions
+                    JOIN potion_ledger ON potion_ledger.potion_sku = potions.sku
+                    GROUP BY potion_sku, name, red_ml, green_ml, blue_ml, dark_ml, price
+                    """))
         for potion_sku, name, red_ml, green_ml, blue_ml, dark_ml, price, stock in my_inventory:
             if stock != 0:
                 catalog.append({

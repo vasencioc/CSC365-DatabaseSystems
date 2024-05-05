@@ -27,12 +27,12 @@ def post_deliver_barrels(barrels_delivered: list[Barrel], order_id: int):
     spent = 0
     with db.engine.begin() as connection:
         for barrel in barrels_delivered:
-            spent -= (barrel.price * barrel.quantity)
+            spent += (barrel.price * barrel.quantity)
             red_ml_bought += (barrel.ml_per_barrel * barrel.quantity * barrel.potion_type[0])
             green_ml_bought += (barrel.ml_per_barrel * barrel.quantity * barrel.potion_type[1])
             blue_ml_bought += (barrel.ml_per_barrel * barrel.quantity * barrel.potion_type[2])
             dark_ml_bought += (barrel.ml_per_barrel * barrel.quantity * barrel.potion_type[3])
-        connection.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:gold)"), {"gold": spent})
+        connection.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:gold)"), {"gold": (spent * -1)})
         connection.execute(sqlalchemy.text("""INSERT INTO ml_ledger (red_ml, green_ml, blue_ml, dark_ml) 
                                               VALUES (:redML, :greenML, :blueML, :darkML)"""), 
                                           [{"redML": red_ml_bought, "greenML": green_ml_bought, "blueML": blue_ml_bought, "darkML": dark_ml_bought}])
@@ -54,10 +54,11 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                                         SELECT potion_sku 
                                         FROM potion_ledger 
                                         GROUP BY potion_sku 
-                                        ORDER BY SUM(change) ASC LIMIT 1"""))
-        red_needed, green_needed, blue_needed, dark_needed = conn.execute(sqlalchemy.text("""
-                                                        SELECT red_ml, green_ml, blue_ml, dark_ml 
-                                                        FROM potions WHERE sku = :potion"""), [{"potion": low_potion}]).scalar()
+                                        ORDER BY SUM(change) ASC LIMIT 1""")).scalar()
+        low_ml = conn.execute(sqlalchemy.text("""
+                                        SELECT red_ml, green_ml, blue_ml, dark_ml 
+                                        FROM potions WHERE sku = :potion"""), [{"potion": low_potion}]).first()
+        red_needed, green_needed, blue_needed, dark_needed = low_ml.red_ml, low_ml.green_ml, low_ml.blue_ml, low_ml.dark_ml
         wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
         level = conn.execute(sqlalchemy.text("SELECT SUM(red_ml + green_ml + blue_ml + dark_ml) FROM ml_ledger")).scalar()
     #traverse catalog

@@ -81,25 +81,20 @@ def post_visits(visit_id: int, customers: list[Customer]):
     """
     with db.engine.begin() as conn:
         for customer in customers:
-            customerID = conn.execute(sqlalchemy.text("SELECT customer_id FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
-                         [{"Name": customer.customer_name, "Level": customer.level, "Class": customer.character_class}]).scalar()
             conn.execute(sqlalchemy.text("""
-                        INSERT INTO visits (customer_id, name, class, level) 
-                        VALUES (:customerID, :Name, :Class, :Level)"""),
-                        [{"Name": customer.customer_name, "Level": customer.level, "Class": customer.character_class}])
+                        INSERT INTO visits (visit_id, name, class, level) 
+                        VALUES (:visitID, :Name, :Class, :Level)"""),
+                        [{"visitID": visit_id, "Name": customer.customer_name, "Class": customer.character_class, "Level": customer.level}])
     print(customers)
     return "OK"
 
 @router.post("/")
 def create_cart(new_cart: Customer):
     """ """
-    Name = new_cart.customer_name
-    Class = new_cart.character_class
-    Level = new_cart.level
     with db.engine.begin() as conn:
-        id = conn.execute(sqlalchemy.text("SELECT customer_id FROM customers WHERE name = :Name AND level = :Level AND class = :Class"),
-                         [{"Name": Name, "Level": Level, "Class":Class}]).scalar()
-        cartID = conn.execute(sqlalchemy.text("INSERT INTO carts (customer_id) VALUES (:id) RETURNING cart_id"), [{"id": id}]).scalar()
+        id = conn.execute(sqlalchemy.text("INSERT INTO customers (name, level, class) VALUES (:Name, :Level, :Class) RETURNING customer_id"),
+                         [{"Name": new_cart.customer_name, "Level": new_cart.level, "Class":new_cart.character_class}]).scalar()
+        cartID = conn.execute(sqlalchemy.text("INSERT INTO carts (customer_id) VALUES (:id) RETURNING cart_id"), {"id": id}).scalar()
     return {"cart_id": cartID}
 
 class CartItem(BaseModel):
@@ -122,9 +117,9 @@ class CartCheckout(BaseModel):
 
 @router.post("/{cart_id}/checkout")
 def checkout(cart_id: int, cart_checkout: CartCheckout):
-    total_paid = 0
-    total_bought = 0
     with db.engine.begin() as conn:
+        total_paid = 0
+        total_bought = 0
         items = conn.execute(sqlalchemy.text("""SELECT potion, quantity, price
                                                 FROM cart_items 
                                                 JOIN carts ON cart_items.cart_id = carts.cart_id 
@@ -132,15 +127,12 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                                                 WHERE carts.cart_id = :cartID"""),
                                             {"cartID": cart_id})
         for item in items:
-            total_bought += item.quantity
-            spent = item.quantity * item.price
+            potion, quantity, price = item.potion, item.quantity, item.price
+            total_bought += quantity
+            total_paid += (quantity * price)
             conn.execute(sqlalchemy.text("""INSERT INTO potion_ledger (potion_sku, change)
                                             VALUES(:potion_id, :quantity)"""),
-                                        [{"potion_id": item.potion, "quantity": item.quantity}])
-        total_paid += spent
-        conn.execute(sqlalchemy.text("""
-                                        INSERT INTO gold_ledger (gold)
-                                        VALUES(:total_paid),
-                                        """),
-                                    [{"total_paid": total_paid}])
+                                        [{"potion_id": potion, "quantity": (quantity * -1)}])
+        conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:total_paid)"),
+                                    {"total_paid": total_paid})
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
