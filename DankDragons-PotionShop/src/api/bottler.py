@@ -81,7 +81,7 @@ def get_bottle_plan():
         while(level < (0.8 * capacity)):
             rand_potion = conn.execute(sqlalchemy.text("SELECT * FROM potions ORDER BY RANDOM() LIMIT 1")).first()
             rand_green, rand_red, rand_blue, rand_dark = rand_potion.green_ml, rand_potion.red_ml, rand_potion.blue_ml, rand_potion.dark_ml
-            if(rand_potion.red_ml <= stock.red and rand_potion.green_ml <= stock.green and rand_potion.blue_ml <= stock.blue and rand_potion.dark_ml <= stock.dark):
+            if(rand_red <= red and rand_green <= green and rand_blue <= blue and rand_dark <= dark):
                 green -= rand_green
                 red -= rand_red
                 blue -= rand_blue
