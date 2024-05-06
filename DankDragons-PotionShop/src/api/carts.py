@@ -137,7 +137,10 @@ def search_orders(
                 "line_item_total": line_total,
                 "timestamp": created_at,
             })
-        search_page = int(search_page)
+        if search_page == "":
+            search_page = 0
+        else: 
+            search_page = int(search_page)
         if search_page > 1:
             results_prev = all_results[(((search_page - 1) * 5) - 5):(((search_page - 1) * 5) - 1)]
         results = all_results[((search_page * 5) - 5):((search_page * 5) - 1)]

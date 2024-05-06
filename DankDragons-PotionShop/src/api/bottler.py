@@ -50,24 +50,24 @@ def get_bottle_plan():
     with db.engine.begin() as conn:
         capacity = 50
         stock = conn.execute(sqlalchemy.text("""
-                                            SELECT SUM(red_ml) red, SUM(green_ml) green, SUM(blue_ml) blue, SUM(dark_ml) dark
+                                            SELECT COALESCE(SUM(red_ml), 0) red, COALESCE(SUM(green_ml), 0) green,
+                                                    COALESCE(SUM(blue_ml), 0) blue, COALESCE(SUM(dark_ml), 0) dark
                                             FROM ml_ledger""")).first()
-        if stock is not None:
-            green, red, blue, dark = stock.green, stock.red, stock.blue, stock.dark
+        red, green, blue, dark = stock.red, stock.green, stock.blue, stock.dark
         level = conn.execute(sqlalchemy.text("SELECT COALESCE(SUM(change), 0) FROM potion_ledger")).scalar()
         least_potion = conn.execute(sqlalchemy.text("""
                                         SELECT potion_sku 
                                         FROM potion_ledger 
                                         GROUP BY potion_sku 
                                         ORDER BY SUM(change) ASC LIMIT 1""")).scalar()
-        if least_potion is not None and stock is not None:
+        if least_potion is not None:
             needed  = conn.execute(sqlalchemy.text("""
                                             SELECT red_ml, green_ml, blue_ml, dark_ml 
                                             FROM potions
                                             WHERE sku = :least_potion"""), {"least_potion": least_potion}).first()
             needed_green, needed_red, needed_blue, needed_dark = needed.green_ml, needed.red_ml, needed.blue_ml, needed.dark
             least_quantity = 0
-            while(green  >= needed_green and red >= needed_red and blue >= needed_blue and dark >= needed_dark and level < capacity):
+            while(green  > needed_green and red > needed_red and blue > needed_blue and dark > needed_dark and level < capacity):
                 green -= needed_green
                 red -= needed_red
                 blue -= needed_blue
@@ -79,19 +79,18 @@ def get_bottle_plan():
                         "potion_type": [needed_red, needed_green, needed_blue, needed_dark],
                         "quantity": least_quantity,
                     })
-        while(level < (0.8 * capacity)):
-            rand_potion = conn.execute(sqlalchemy.text("SELECT * FROM potions ORDER BY RANDOM() LIMIT 1")).first()
-            rand_green, rand_red, rand_blue, rand_dark = rand_potion.green_ml, rand_potion.red_ml, rand_potion.blue_ml, rand_potion.dark_ml
-            if(rand_red <= red and rand_green <= green and rand_blue <= blue and rand_dark <= dark):
-                green -= rand_green
-                red -= rand_red
-                blue -= rand_blue
-                dark -= rand_dark
-                level += 1
-                plan.update({
-                    "potion_type": [rand_red, rand_green, rand_blue, rand_dark],
-                    "quantity": 1,
-                    })
+        rand_potion = conn.execute(sqlalchemy.text("SELECT * FROM potions ORDER BY RANDOM() LIMIT 1")).first()
+        rand_green, rand_red, rand_blue, rand_dark = rand_potion.green_ml, rand_potion.red_ml, rand_potion.blue_ml, rand_potion.dark_ml
+        while(rand_red < red and rand_green < green and rand_blue < blue and rand_dark < dark and level < capacity):
+            green -= rand_green
+            red -= rand_red
+            blue -= rand_blue
+            dark -= rand_dark
+            level += 1
+            plan.update({
+                "potion_type": [rand_red, rand_green, rand_blue, rand_dark],
+                "quantity": 1,
+                })
     return plan
 
 if __name__ == "__main__":

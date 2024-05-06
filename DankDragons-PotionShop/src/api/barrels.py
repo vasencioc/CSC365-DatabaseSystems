@@ -50,53 +50,19 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     capacity = 1000
     print(wholesale_catalog)
     with db.engine.begin() as conn:
-        low_potion = conn.execute(sqlalchemy.text("""
-                                        SELECT potion_sku 
-                                        FROM potion_ledger 
-                                        GROUP BY potion_sku 
-                                        ORDER BY SUM(change) ASC LIMIT 1""")).scalar()
-        low_ml = conn.execute(sqlalchemy.text("""
-                                        SELECT red_ml, green_ml, blue_ml, dark_ml 
-                                        FROM potions WHERE sku = :potion"""), [{"potion": low_potion}]).first()
-        if low_ml is not None:
-            red_needed, green_needed, blue_needed, dark_needed = low_ml.red_ml, low_ml.green_ml, low_ml.blue_ml, low_ml.dark_ml
         wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
-        level = conn.execute(sqlalchemy.text("SELECT SUM(red_ml + green_ml + blue_ml + dark_ml) FROM ml_ledger")).scalar()
+        stock = conn.execute(sqlalchemy.text("""
+                                            SELECT COALESCE(SUM(red_ml), 0) red, COALESCE(SUM(green_ml), 0) green,
+                                                    COALESCE(SUM(blue_ml), 0) blue, COALESCE(SUM(dark_ml), 0) dark
+                                            FROM ml_ledger""")).first()
+        red, green, blue, dark = stock.red, stock.green, stock.blue, stock.dark
+        level = red + green + blue + dark
     #traverse catalog
     for barrel in wholesale_catalog:
-        if((red_needed > 0 or green_needed > 0 or blue_needed > 0 or dark_needed > 0) and level < capacity):
-            # if DARK barrel in catalog
-            if barrel.potion_type == [0, 0, 0, 1] and dark_needed > 0 and barrel.quantity and barrel.price < wallet:
+        #only buying mini barrels for now
+        if(barrel.ml_per_barrel == 200 and (level + 200) < capacity and wallet > 60):
                 wallet -= barrel.price
-                green_needed -= barrel.ml_per_barrel
-                level += barrel.ml_per_barrel
-                purchase.append({
-                    "sku": barrel.sku,
-                    "quantity": 1,
-                })
-            # if GREEN barrel in catalog
-            elif barrel.potion_type == [0,1, 0, 0] and green_needed > 0 and barrel.quantity and barrel.price < wallet: 
-                wallet -= barrel.price
-                green_needed -= barrel.ml_per_barrel
-                level += barrel.ml_per_barrel
-                purchase.append({
-                    "sku": barrel.sku,
-                    "quantity": 1,
-                })
-            # if RED barrel in catalog
-            elif (barrel.potion_type == [1, 0, 0, 0]) and red_needed > 0 and barrel.quantity and barrel.price < wallet:
-                wallet -= barrel.price
-                green_needed -= barrel.ml_per_barrel
-                level += barrel.ml_per_barrel
-                purchase.append({
-                    "sku": barrel.sku,
-                    "quantity": 1,
-                })
-            # if BLUE barrel in catalog
-            elif barrel.potion_type == [0, 0, 1, 0] and blue_needed > 0 and barrel.quantity and barrel.price < wallet:
-                wallet -= barrel.price
-                green_needed -= barrel.ml_per_barrel
-                level += barrel.ml_per_barrel
+                level += 200
                 purchase.append({
                     "sku": barrel.sku,
                     "quantity": 1,
