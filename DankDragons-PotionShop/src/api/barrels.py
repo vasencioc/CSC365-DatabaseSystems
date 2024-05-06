@@ -58,7 +58,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         low_ml = conn.execute(sqlalchemy.text("""
                                         SELECT red_ml, green_ml, blue_ml, dark_ml 
                                         FROM potions WHERE sku = :potion"""), [{"potion": low_potion}]).first()
-        red_needed, green_needed, blue_needed, dark_needed = low_ml.red_ml, low_ml.green_ml, low_ml.blue_ml, low_ml.dark_ml
+        if low_ml is not None:
+            red_needed, green_needed, blue_needed, dark_needed = low_ml.red_ml, low_ml.green_ml, low_ml.blue_ml, low_ml.dark_ml
         wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
         level = conn.execute(sqlalchemy.text("SELECT SUM(red_ml + green_ml + blue_ml + dark_ml) FROM ml_ledger")).scalar()
     #traverse catalog

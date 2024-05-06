@@ -53,8 +53,10 @@ def search_orders(
     Your results must be paginated, the max results you can return at any
     time is 5 total line items.
     """
+    all_results = []
     results = []
-
+    results_prev = []
+    results_next = []
     with db.engine.begin() as conn:
         if customer_name and potion_sku:
             table_results = conn.execute(sqlalchemy.text("""SELECT line_item_id, customers.created_at, quantity
@@ -69,7 +71,7 @@ def search_orders(
                 for line_id, created_at, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": potion_sku}).scalar()
                     line_total *= quantity
-                    results.update({
+                    all_results.update({
                 "line_item_id": line_id,
                 "item_sku": potion_sku,
                 "customer_name": customer_name,
@@ -89,7 +91,7 @@ def search_orders(
                 for line_id, created_at, sku, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()
                     line_total *= quantity
-                    results.update({
+                    all_results.update({
                 "line_item_id": line_id,
                 "item_sku": sku,
                 "customer_name": customer_name,
@@ -109,7 +111,7 @@ def search_orders(
                 for line_id, created_at, Name, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": potion_sku}).scalar()
                     line_total *= quantity
-                    results.update({
+                    all_results.update({
                 "line_item_id": line_id,
                 "item_sku": potion_sku,
                 "customer_name": Name,
@@ -128,17 +130,20 @@ def search_orders(
                 for line_id, created_at, Name, sku, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()
                     line_total *= quantity
-                    results.update({
+                    all_results.update({
                 "line_item_id": line_id,
                 "item_sku": sku,
                 "customer_name": Name,
                 "line_item_total": line_total,
                 "timestamp": created_at,
             })
-
+        if search_page > 1:
+            results_prev = all_results[(((search_page - 1) * 5) - 5):(((search_page - 1) * 5) - 1)]
+        results = all_results[((search_page * 5) - 5):((search_page * 5) - 1)]
+        results_next = all_results[(((search_page + 1) * 5) - 5):(((search_page + 1) * 5) - 1)]
     return {
-        "previous": "",
-        "next": "",
+        "previous": results_prev,
+        "next": results_next,
         "results": results
     }
 

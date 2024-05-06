@@ -52,14 +52,15 @@ def get_bottle_plan():
         stock = conn.execute(sqlalchemy.text("""
                                             SELECT SUM(red_ml) red, SUM(green_ml) green, SUM(blue_ml) blue, SUM(dark_ml) dark
                                             FROM ml_ledger""")).first()
-        green, red, blue, dark = stock.green, stock.red, stock.blue, stock.dark
+        if stock is not None:
+            green, red, blue, dark = stock.green, stock.red, stock.blue, stock.dark
         level = conn.execute(sqlalchemy.text("SELECT COALESCE(SUM(change), 0) FROM potion_ledger")).scalar()
         least_potion = conn.execute(sqlalchemy.text("""
                                         SELECT potion_sku 
                                         FROM potion_ledger 
                                         GROUP BY potion_sku 
                                         ORDER BY SUM(change) ASC LIMIT 1""")).scalar()
-        if(least_potion is not None):
+        if least_potion is not None and stock is not None:
             needed  = conn.execute(sqlalchemy.text("""
                                             SELECT red_ml, green_ml, blue_ml, dark_ml 
                                             FROM potions
