@@ -22,5 +22,5 @@ def reset():
         conn.execute(sqlalchemy.text("TRUNCATE visits"))
         conn.execute(sqlalchemy.text("TRUNCATE customers CASCADE"))
         conn.execute(sqlalchemy.text("TRUNCATE gold_ledger"))
-        conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:starting_bank)"), {"starting_banks": 100})
+        conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:starting_bank)"), {"starting_bank": 100})
     return "OK"
