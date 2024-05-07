@@ -46,7 +46,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
 
 @router.post("/plan")
 def get_bottle_plan():
-    plan = {}
+    plan = []
     with db.engine.begin() as conn:
         capacity = 50
         stock = conn.execute(sqlalchemy.text("""
@@ -75,7 +75,7 @@ def get_bottle_plan():
                 least_quantity += 1
                 level += 1
             if least_quantity:
-                plan.update({
+                plan.append({
                         "potion_type": [needed_red, needed_green, needed_blue, needed_dark],
                         "quantity": least_quantity,
                     })
@@ -87,7 +87,7 @@ def get_bottle_plan():
             blue -= rand_blue
             dark -= rand_dark
             level += 1
-            plan.update({
+            plan.append({
                 "potion_type": [rand_red, rand_green, rand_blue, rand_dark],
                 "quantity": 1,
                 })
