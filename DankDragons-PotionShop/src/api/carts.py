@@ -86,7 +86,7 @@ def search_orders(
                                                             JOIN customers ON customers.customer_id = cart_items.customer_id
                                                             WHERE customers.name = :NAME
                                                             ORDER BY {} {}""".format(sort_col.value, sort_order.value)),
-                                                            [{"sort_col": sort_col, "sort_order": sort_order, "NAME": customer_name}])
+                                                            {"NAME": customer_name})
             if table_results:
                 for line_id, created_at, sku, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()
@@ -106,7 +106,7 @@ def search_orders(
                                                             JOIN customers ON customers.customer_id = cart_items.customer_id
                                                             WHERE cart_items.potion = :SKU
                                                             ORDER BY {} {}""".format(sort_col.value, sort_order.value)),
-                                                            [{"sort_col": sort_col, "sort_order": sort_order, "SKU": potion_sku}])
+                                                            {"SKU": potion_sku})
             if table_results:
                 for line_id, created_at, Name, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": potion_sku}).scalar()
@@ -124,8 +124,7 @@ def search_orders(
                                                             JOIN carts ON cart_items.cart_id = carts.cart_id 
                                                             JOIN potions ON potions.sku = cart_items.potion
                                                             JOIN customers ON customers.customer_id = cart_items.customer_id
-                                                            ORDER BY {} {}""".format(sort_col.value, sort_order.value)),
-                                                            [{"sort_col": sort_col, "sort_order": sort_order}])
+                                                            ORDER BY {} {}""".format(sort_col.value, sort_order.value)))
             if table_results:
                 for line_id, created_at, Name, sku, quantity in table_results:
                     line_total = conn.execute(sqlalchemy.text("SELECT price FROM potions WHERE sku = :potion"), {"potion": sku}).scalar()

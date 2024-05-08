@@ -49,6 +49,7 @@ def get_bottle_plan():
     plan = []
     with db.engine.begin() as conn:
         capacity = 50
+        least_quantity = 0
         stock = conn.execute(sqlalchemy.text("""
                                             SELECT COALESCE(SUM(red_ml), 0) red, COALESCE(SUM(green_ml), 0) green,
                                                     COALESCE(SUM(blue_ml), 0) blue, COALESCE(SUM(dark_ml), 0) dark
@@ -66,7 +67,6 @@ def get_bottle_plan():
                                             FROM potions
                                             WHERE sku = :least_potion"""), {"least_potion": least_potion}).first()
             needed_green, needed_red, needed_blue, needed_dark = needed.green_ml, needed.red_ml, needed.blue_ml, needed.dark
-            least_quantity = 0
             while(green  > needed_green and red > needed_red and blue > needed_blue and dark > needed_dark and level < capacity):
                 green -= needed_green
                 red -= needed_red
@@ -79,18 +79,20 @@ def get_bottle_plan():
                         "potion_type": [needed_red, needed_green, needed_blue, needed_dark],
                         "quantity": least_quantity,
                     })
-        rand_potion = conn.execute(sqlalchemy.text("SELECT * FROM potions ORDER BY RANDOM() LIMIT 1")).first()
-        rand_green, rand_red, rand_blue, rand_dark = rand_potion.green_ml, rand_potion.red_ml, rand_potion.blue_ml, rand_potion.dark_ml
-        while(rand_red < red and rand_green < green and rand_blue < blue and rand_dark < dark and level < capacity):
-            green -= rand_green
-            red -= rand_red
-            blue -= rand_blue
-            dark -= rand_dark
-            level += 1
-            plan.append({
-                "potion_type": [rand_red, rand_green, rand_blue, rand_dark],
-                "quantity": 1,
+        stock_list = {"redStock":[red, [1, 0, 0, 0]], "greenStock": [green, [0, 1, 0, 0]],
+                      "blueStock": [blue, [0, 0, 1, 0]], "darkStock": [dark, [0, 0, 0, 1]]}
+        for _, stock_info in stock_list.items():
+            quantity = 0
+            while stock_info[0] > 0 and level < capacity:
+                stock_info[0] -= 100
+                level += 1
+                quantity += 1
+            if quantity:
+                plan.append({
+                    "potion_type": stock_info[1],
+                    "quantity": quantity,
                 })
+
     return plan
 
 if __name__ == "__main__":
