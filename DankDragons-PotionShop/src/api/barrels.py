@@ -52,9 +52,9 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     with db.engine.begin() as conn:
         wallet = conn.execute(sqlalchemy.text("SELECT SUM(gold) FROM gold_ledger")).scalar()
         stock = conn.execute(sqlalchemy.text("""
-                                            SELECT COALESCE(SUM(red_ml), 0) red, COALESCE(SUM(green_ml), 0) green,
-                                                    COALESCE(SUM(blue_ml), 0) blue, COALESCE(SUM(dark_ml), 0) dark
-                                            FROM ml_ledger"""))
+                                            SELECT COALESCE(SUM(red_ml), 0) AS red, COALESCE(SUM(green_ml), 0) AS green,
+                                                    COALESCE(SUM(blue_ml), 0) AS blue, COALESCE(SUM(dark_ml), 0) AS dark
+                                            FROM ml_ledger""")).first()
         red, green, blue, dark = stock.red, stock.green, stock.blue, stock.dark
         level = red + green + blue + dark
     #traverse catalog
