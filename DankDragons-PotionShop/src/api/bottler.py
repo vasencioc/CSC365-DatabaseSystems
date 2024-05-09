@@ -79,8 +79,8 @@ def get_bottle_plan():
                         "potion_type": [needed_red, needed_green, needed_blue, needed_dark],
                         "quantity": least_quantity,
                     })
-        stock_list = {"redStock":[red, [1, 0, 0, 0]], "greenStock": [green, [0, 1, 0, 0]],
-                      "blueStock": [blue, [0, 0, 1, 0]], "darkStock": [dark, [0, 0, 0, 1]]}
+        stock_list = {"redStock":[red, [100, 0, 0, 0]], "greenStock": [green, [0, 100, 0, 0]],
+                      "blueStock": [blue, [0, 0, 100, 0]], "darkStock": [dark, [0, 0, 0, 100]]}
         for _, stock_info in stock_list.items():
             quantity = 0
             while stock_info[0] > 0 and level < capacity:
