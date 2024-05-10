@@ -20,10 +20,10 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
     """ """
     print(f"potions delievered: {potions_delivered} order_id: {order_id}")
     with db.engine.begin() as conn:
-        stock = conn.execute(sqlalchemy.text("""
-                                        SELECT SUM(red_ml) red, SUM(green_ml) green, SUM(blue_ml) blue, SUM(dark_ml) dark
-                                        FROM ml_ledger""")).first()
-        stock_red, stock_green, stock_blue, stock_dark = stock.red, stock.green, stock.blue, stock.dark
+        change_red = 0
+        change_green = 0
+        change_blue = 0
+        change_dark = 0
         for potion in potions_delivered:
             sku = conn.execute(sqlalchemy.text("""
                         SELECT sku 
@@ -34,14 +34,14 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory], order_id: int
                         INSERT INTO potion_ledger (potion_sku, change)
                         VALUES(:potion_id, :quantity)
                         """),[{"potion_id": sku, "quantity": potion.quantity}])
-            stock_red -= (potion.potion_type[0] * potion.quantity)
-            stock_green -= (potion.potion_type[1] * potion.quantity)
-            stock_blue -= (potion.potion_type[2] * potion.quantity)
-            stock_dark -= (potion.potion_type[3] * potion.quantity)
+            change_red += (potion.potion_type[0] * potion.quantity)
+            change_green += (potion.potion_type[1] * potion.quantity)
+            change_blue += (potion.potion_type[2] * potion.quantity)
+            change_dark += (potion.potion_type[3] * potion.quantity)
         conn.execute(sqlalchemy.text("""
                         INSERT INTO ml_ledger (red_ml, green_ml, blue_ml, dark_ml)
                         VALUES(:redML, :greenML, :blueML, :darkML)
-                        """),[{"redML": stock_red, "greenML": stock_green, "blueML": stock_blue, "darkML": stock_dark}])
+                        """),[{"redML": (change_red * -1), "greenML": (change_green * -1), "blueML": (change_blue * -1), "darkML": (change_dark * -1)}])
     return "OK"
 
 @router.post("/plan")
@@ -66,7 +66,7 @@ def get_bottle_plan():
                                             SELECT red_ml, green_ml, blue_ml, dark_ml 
                                             FROM potions
                                             WHERE sku = :least_potion"""), {"least_potion": least_potion}).first()
-            needed_green, needed_red, needed_blue, needed_dark = needed.green_ml, needed.red_ml, needed.blue_ml, needed.dark
+            needed_green, needed_red, needed_blue, needed_dark = needed.green_ml, needed.red_ml, needed.blue_ml, needed.dark_ml
             while(green  > needed_green and red > needed_red and blue > needed_blue and dark > needed_dark and level < capacity):
                 green -= needed_green
                 red -= needed_red
