@@ -202,19 +202,21 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     with db.engine.begin() as conn:
         total_paid = 0
         total_bought = 0
-        items = conn.execute(sqlalchemy.text("""SELECT potion, quantity, price
-                                                FROM cart_items 
-                                                JOIN carts ON cart_items.cart_id = carts.cart_id 
-                                                JOIN potions ON potions.sku = cart_items.potion
-                                                WHERE carts.cart_id = :cartID"""),
-                                            {"cartID": cart_id})
-        for item in items:
-            potion, quantity, price = item.potion, item.quantity, item.price
-            total_bought += quantity
-            total_paid += (quantity * price)
-            conn.execute(sqlalchemy.text("""INSERT INTO potion_ledger (potion_sku, change)
-                                            VALUES(:potion_id, :quantity)"""),
-                                        [{"potion_id": potion, "quantity": (quantity * -1)}])
-        conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:total_paid)"),
-                                    {"total_paid": total_paid})
+        done = conn.execute(sqlalchemy.text("SELECT checkout from cart where cart_id = :cartID"), {"cartID": cart_id})
+        if not done:
+            items = conn.execute(sqlalchemy.text("""SELECT potion, quantity, price
+                                                    FROM cart_items 
+                                                    JOIN carts ON cart_items.cart_id = carts.cart_id 
+                                                    JOIN potions ON potions.sku = cart_items.potion
+                                                    WHERE carts.cart_id = :cartID"""),
+                                                {"cartID": cart_id})
+            for item in items:
+                potion, quantity, price = item.potion, item.quantity, item.price
+                total_bought += quantity
+                total_paid += (quantity * price)
+                conn.execute(sqlalchemy.text("""INSERT INTO potion_ledger (potion_sku, change)
+                                                VALUES(:potion_id, :quantity)"""),
+                                            [{"potion_id": potion, "quantity": (quantity * -1)}])
+            conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:total_paid)"),
+                                        {"total_paid": total_paid})
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
