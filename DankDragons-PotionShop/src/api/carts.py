@@ -202,7 +202,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     with db.engine.begin() as conn:
         total_paid = 0
         total_bought = 0
-        done = conn.execute(sqlalchemy.text("SELECT checkout from cart where cart_id = :cartID"), {"cartID": cart_id})
+        done = conn.execute(sqlalchemy.text("SELECT checkout from carts where cart_id = :cartID"), {"cartID": cart_id})
         if not done:
             items = conn.execute(sqlalchemy.text("""SELECT potion, quantity, price
                                                     FROM cart_items 
@@ -219,4 +219,5 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                                             [{"potion_id": potion, "quantity": (quantity * -1)}])
             conn.execute(sqlalchemy.text("INSERT INTO gold_ledger (gold) VALUES (:total_paid)"),
                                         {"total_paid": total_paid})
+            conn.execute(sqlalchemy.text("INSERT INTO carts (checkout) VALUES (TRUE)"))
     return {"total_potions_bought": total_bought, "total_gold_paid": total_paid}
